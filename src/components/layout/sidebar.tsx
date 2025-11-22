@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -84,6 +85,7 @@ export default function AppSidebar() {
                   <div className="grid auto-rows-auto items-start pl-7 pt-2 gap-1">
                     <Link href="/receipts" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/receipts') && 'bg-muted text-primary')}>Receipts</Link>
                     <Link href="/deliveries" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/deliveries') && 'bg-muted text-primary')}>Delivery Orders</Link>
+                    <Link href="/transfers" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/transfers') && 'bg-muted text-primary')}>Internal Transfers</Link>
                     <Link href="/adjustments" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/adjustments') && 'bg-muted text-primary')}>Adjustments</Link>
                 </div>
               </CollapsibleContent>
