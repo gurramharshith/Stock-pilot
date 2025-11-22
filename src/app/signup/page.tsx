@@ -9,10 +9,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 const signupSchema = z.object({
   fullName: z.string().min(2),
@@ -22,6 +23,7 @@ const signupSchema = z.object({
 
 export default function SignupPage() {
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -39,15 +41,16 @@ export default function SignupPage() {
     // You would typically also save the full name to a user profile in Firestore here
   };
 
-  auth.onAuthStateChanged(user => {
-    if (user) {
+  useEffect(() => {
+    if (!isUserLoading && user) {
       router.push('/dashboard');
       toast({
         title: 'Account Created',
         description: "You've been successfully signed up!",
       });
     }
-  });
+  },[user, isUserLoading, router, toast]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">

@@ -11,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { initializeFirebase } from '@/firebase';
+import { useAuth } from '@/firebase';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -19,6 +19,7 @@ const forgotPasswordSchema = z.object({
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
+  const auth = useAuth();
 
   const form = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -28,7 +29,6 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit = (values: z.infer<typeof forgotPasswordSchema>) => {
-    const { auth } = initializeFirebase();
     sendPasswordResetEmail(auth, values.email)
       .then(() => {
         toast({

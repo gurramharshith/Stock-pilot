@@ -10,10 +10,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -22,6 +23,7 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -36,17 +38,17 @@ export default function LoginPage() {
   const onSubmit = (values: z.infer<typeof loginSchema>) => {
     initiateEmailSignIn(auth, values.email, values.password);
   };
-
-  // This is a simplified example. In a real app, you'd handle loading and error states.
-  auth.onAuthStateChanged(user => {
-    if (user) {
+  
+  useEffect(() => {
+    if (!isUserLoading && user) {
       router.push('/dashboard');
       toast({
         title: 'Login Successful',
         description: 'Welcome back!',
       });
     }
-  });
+  }, [user, isUserLoading, router, toast]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
