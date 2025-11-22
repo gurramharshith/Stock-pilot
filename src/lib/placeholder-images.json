@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "product-1",
+      "description": "A pile of steel rods",
+      "imageUrl": "https://images.unsplash.com/photo-1601536508380-909438a74b02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzdGVlbCUyMHJvZHN8ZW58MHx8fHwxNzYzNzg1MDMxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "steel rods"
+    },
+    {
+      "id": "product-2",
+      "description": "Bags of cement",
+      "imageUrl": "https://images.unsplash.com/photo-1523293915678-d126868e96f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjZW1lbnQlMjBiYWdzfGVufDB8fHx8MTc2Mzc4NTAzMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cement bags"
+    },
+    {
+      "id": "product-3",
+      "description": "Box of nuts and bolts",
+      "imageUrl": "https://images.unsplash.com/photo-1704732061018-3ac738176c20?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxudXRzJTIwYm9sdHN8ZW58MHx8fHwxNzYzNzQzNjM3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nuts bolts"
+    },
+    {
+      "id": "product-4",
+      "description": "Stack of plywood sheets",
+      "imageUrl": "https://images.unsplash.com/photo-1709268163280-ee28ed34e7af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwbHl3b29kJTIwc2hlZXRzfGVufDB8fHx8MTc2Mzc4NTAzMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "plywood sheets"
+    }
+  ]
 }
