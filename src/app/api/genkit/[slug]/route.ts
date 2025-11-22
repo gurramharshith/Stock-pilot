@@ -1,4 +1,8 @@
-import { genkit } from '@/ai/genkit';
-import { defineNextJsHandler } from '@genkit-ai/next';
+'use server';
 
-export const { GET, POST } = defineNextJsHandler(genkit);
+import {ai} from '@/ai/genkit';
+import {createApiHandler} from '@genkit-ai/next/server';
+
+export const {GET, POST} = createApiHandler({
+  ai,
+});
