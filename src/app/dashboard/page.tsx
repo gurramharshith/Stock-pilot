@@ -1,4 +1,4 @@
-import { Package, ArrowDownLeft, ArrowUpRight, Blocks } from 'lucide-react';
+import { Package, ArrowDownLeft, ArrowUpRight, Blocks, ArrowRightLeft } from 'lucide-react';
 import KpiCard from '@/components/dashboard/kpi-card';
 import OperationsTable from '@/components/dashboard/operations-table';
 import { kpiData } from '@/lib/data';
@@ -6,7 +6,7 @@ import { kpiData } from '@/lib/data';
 export default function DashboardPage() {
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
         <KpiCard
           title="Total Products in Stock"
           value={kpiData.totalProducts.toLocaleString()}
@@ -30,6 +30,12 @@ export default function DashboardPage() {
           value={kpiData.pendingDeliveries}
           icon={ArrowUpRight}
           description="Outgoing orders to be shipped"
+        />
+         <KpiCard
+          title="Internal Transfers"
+          value={kpiData.internalTransfers}
+          icon={ArrowRightLeft}
+          description="Scheduled internal movements"
         />
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-1">

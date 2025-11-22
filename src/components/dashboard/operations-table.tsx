@@ -50,6 +50,8 @@ export default function OperationsTable() {
                 <TableHead>Reference</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Product</TableHead>
+                <TableHead className="hidden sm:table-cell">Source</TableHead>
+                <TableHead className="hidden sm:table-cell">Destination</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
@@ -61,6 +63,8 @@ export default function OperationsTable() {
                     <TableCell className="font-medium">{op.reference}</TableCell>
                     <TableCell>{op.type}</TableCell>
                     <TableCell>{op.product}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{op.source || 'N/A'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{op.destination || 'N/A'}</TableCell>
                     <TableCell className="text-right">{op.quantity}</TableCell>
                     <TableCell>
                     <Badge variant={getStatusVariant(op.status)}>{op.status}</Badge>
@@ -69,8 +73,8 @@ export default function OperationsTable() {
                 </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                            No operations found.
+                        <TableCell colSpan={8} className="h-24 text-center">
+                            No operations found for the selected filters.
                         </TableCell>
                     </TableRow>
                 )}

@@ -76,7 +76,7 @@ export default function OperationsFilters({ allOperations, setFilteredOperations
         </SelectContent>
       </Select>
       {isFiltered && (
-        <Button variant="ghost" onClick={resetFilters}>
+        <Button variant="ghost" onClick={resetFilters} className="h-9">
             <X className="mr-2 h-4 w-4" />
             Reset
         </Button>
