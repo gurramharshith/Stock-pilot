@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFlow } from '@genkit-ai/next/client';
+import { streamFlow } from '@genkit-ai/next/client';
 import { suggestReorderingRules, SuggestReorderingRulesInput, SuggestReorderingRulesOutput } from '@/ai/flows/suggest-reordering-rules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import type { Product } from '@/lib/types';
 
 export default function ReorderingRules({ product }: { product: Product }) {
-  const [flow, stream] = useFlow(suggestReorderingRules);
+  const {run, stream, result, running} = streamFlow(suggestReorderingRules);
   const [historicalData, setHistoricalData] = useState('Last 6 months: 120, 150, 130, 160, 140, 170 units sold.');
   const [leadTime, setLeadTime] = useState(14);
   const [serviceLevel, setServiceLevel] = useState(0.95);
@@ -31,7 +31,7 @@ export default function ReorderingRules({ product }: { product: Product }) {
       serviceLevel,
     };
     
-    const result = await flow(input);
+    const result = await run(input);
     setSuggestions(result);
   };
 
@@ -73,8 +73,8 @@ export default function ReorderingRules({ product }: { product: Product }) {
             />
             <p className="text-sm text-muted-foreground">The desired probability of not stocking out.</p>
           </div>
-          <Button type="submit" disabled={stream.inProgress}>
-            {stream.inProgress ? (
+          <Button type="submit" disabled={running}>
+            {running ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Wand2 className="mr-2 h-4 w-4" />
@@ -83,7 +83,7 @@ export default function ReorderingRules({ product }: { product: Product }) {
           </Button>
         </form>
         
-        {stream.inProgress && (
+        {running && !suggestions && (
             <div className="space-y-4 rounded-lg border border-dashed p-4">
                 <p className="text-sm text-muted-foreground text-center">AI is analyzing the data...</p>
                  <div className="grid grid-cols-3 gap-4">
