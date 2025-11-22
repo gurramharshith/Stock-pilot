@@ -20,7 +20,7 @@ const forgotPasswordSchema = z.object({
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
-  const auth = useAuth(); // Use the hook to get the auth instance
+  const auth = useAuth();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof forgotPasswordSchema>>({
@@ -43,21 +43,36 @@ export default function ForgotPasswordPage() {
       });
 
       form.reset();
-    } catch (error: any) {
-      console.error('sendPasswordResetEmail error:', error);
-      const code = error?.code?.toString?.() ?? error?.message ?? '';
+    } catch (error: unknown) {
+      // print full error object (non-enumerable props too)
+      console.error('sendPasswordResetEmail raw error:', error);
+      // safest stringify of Error objects
+      const errObj = error && typeof error === 'object'
+        ? JSON.parse(JSON.stringify(Object.getOwnPropertyNames(error).reduce((acc: any, k) => {
+            try { acc[k] = (error as any)[k]; } catch(e){ acc[k] = String((error as any)[k]); }
+            return acc;
+          }, {})))
+        : { message: String(error) };
 
+      console.error('sendPasswordResetEmail parsed error:', errObj);
+
+      // friendly mapping
+      const code = (errObj.code || errObj.message || '').toString();
       let message = 'Something went wrong. Please try again.';
       if (code.includes('auth/user-not-found')) {
         message = "No account found for that email address.";
       } else if (code.includes('auth/invalid-email')) {
         message = 'Invalid email address.';
       } else if (code.includes('auth/too-many-requests')) {
-        message = 'Too many requests. Please try again later.';
+        message = 'Too many requests. Try again later.';
+      } else if (code.includes('auth/invalid-api-key')) {
+        message = 'Invalid API key. Check NEXT_PUBLIC_FIREBASE_API_KEY.';
+      } else if (code.includes('auth/operation-not-allowed')) {
+        message = 'Email/password sign-in not enabled in Firebase console.';
       } else if (code.includes('auth/network-request-failed')) {
-        message = 'Network error. Check your connection and try again.';
-      } else if (error?.message) {
-        message = error.message;
+        message = 'Network error. Check your connection.';
+      } else if (errObj.message) {
+        message = errObj.message;
       }
 
       toast({
