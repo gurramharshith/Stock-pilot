@@ -16,6 +16,7 @@ import {
   Wrench,
   History,
   ChevronDown,
+  ThumbsUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -91,6 +92,16 @@ export default function AppSidebar() {
             >
               <History className="h-4 w-4" />
               Move History
+            </Link>
+            <Link
+              href="/recommendations"
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                pathname === '/recommendations' && 'bg-muted text-primary'
+              )}
+            >
+              <ThumbsUp className="h-4 w-4" />
+              Recommendations
             </Link>
              <Link
               href="/settings/warehouse"
