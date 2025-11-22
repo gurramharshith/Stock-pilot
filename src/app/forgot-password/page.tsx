@@ -20,7 +20,7 @@ const forgotPasswordSchema = z.object({
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
-  const auth = useAuth();
+  const auth = useAuth(); // Use the hook to get the auth instance
   const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof forgotPasswordSchema>>({

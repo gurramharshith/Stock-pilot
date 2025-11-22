@@ -11,10 +11,10 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth, useUser } from '@/firebase';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -26,6 +26,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -35,8 +36,22 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof loginSchema>) => {
-    initiateEmailSignIn(auth, values.email, values.password);
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    setLoading(true);
+    try {
+      if (!auth) throw new Error('Firebase auth not initialized');
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      // The onAuthStateChanged listener in the provider will handle the redirect
+    } catch (error: any) {
+      console.error('signInWithEmailAndPassword error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Invalid email or password. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
   
   useEffect(() => {
@@ -96,8 +111,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={loading || isUserLoading}>
+                {loading ? 'Logging in...' : 'Login'}
               </Button>
             </form>
           </Form>

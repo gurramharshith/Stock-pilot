@@ -10,15 +10,15 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth, useUser } from '@/firebase';
-import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const signupSchema = z.object({
-  fullName: z.string().min(2),
+  fullName: z.string().min(2, { message: 'Full name is required' }),
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
 export default function SignupPage() {
@@ -26,6 +26,7 @@ export default function SignupPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -36,9 +37,31 @@ export default function SignupPage() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof signupSchema>) => {
-    initiateEmailSignUp(auth, values.email, values.password);
-    // You would typically also save the full name to a user profile in Firestore here
+  const onSubmit = async (values: z.infer<typeof signupSchema>) => {
+    setLoading(true);
+    try {
+      if (!auth) throw new Error('Firebase auth not initialized');
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      // The onAuthStateChanged listener will handle the redirect.
+      // You would typically also save the full name to a user profile in Firestore here.
+    } catch (error: any) {
+      console.error('createUserWithEmailAndPassword error:', error);
+      let message = 'An unknown error occurred.';
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'This email address is already in use.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'The password is too weak.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: message,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -106,8 +129,8 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Create an account
+              <Button type="submit" className="w-full" disabled={loading || isUserLoading}>
+                {loading ? 'Creating account...' : 'Create an account'}
               </Button>
             </form>
           </Form>
