@@ -9,9 +9,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { getApp } from 'firebase/app';
+import { initializeFirebase } from '@/firebase';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit = (values: z.infer<typeof forgotPasswordSchema>) => {
-    const auth = getAuth(getApp());
+    const { auth } = initializeFirebase();
     sendPasswordResetEmail(auth, values.email)
       .then(() => {
         toast({
