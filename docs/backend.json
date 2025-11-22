@@ -1,0 +1,206 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the StockPilot system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information.  Accessible only by the user and admins.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}",
+        "definition": {
+          "entityName": "warehouse",
+          "schema": {
+            "$ref": "#/backend/entities/warehouse"
+          },
+          "description": "Stores warehouse information and access control lists. Includes denormalized 'members' map for authorization independence.",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}/products/{productId}",
+        "definition": {
+          "entityName": "product",
+          "schema": {
+            "$ref": "#/backend/entities/product"
+          },
+          "description": "Stores product information within a specific warehouse. Inherits access control from the parent warehouse document. Includes denormalized 'members' map from the warehouse for authorization independence.",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            },
+            {
+              "name": "productId",
+              "description": "The unique identifier of the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}/receipts/{receiptId}",
+        "definition": {
+          "entityName": "receipt",
+          "schema": {
+            "$ref": "#/backend/entities/receipt"
+          },
+          "description": "Stores receipt information for incoming stock. Inherits access control from the parent warehouse document. Includes denormalized 'members' map from the warehouse for authorization independence.",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            },
+            {
+              "name": "receiptId",
+              "description": "The unique identifier of the receipt."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}/deliveries/{deliveryId}",
+        "definition": {
+          "entityName": "delivery",
+          "schema": {
+            "$ref": "#/backend/entities/delivery"
+          },
+          "description": "Stores delivery order information for outgoing stock. Inherits access control from the parent warehouse document. Includes denormalized 'members' map from the warehouse for authorization independence.",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            },
+            {
+              "name": "deliveryId",
+              "description": "The unique identifier of the delivery."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}/transfers/{transferId}",
+        "definition": {
+          "entityName": "transfer",
+          "schema": {
+            "$ref": "#/backend/entities/transfer"
+          },
+          "description": "Stores internal transfer information. Inherits access control from the parent warehouse document. Includes denormalized 'members' map from the warehouse for authorization independence.",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            },
+            {
+              "name": "transferId",
+              "description": "The unique identifier of the transfer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}/adjustments/{adjustmentId}",
+        "definition": {
+          "entityName": "adjustment",
+          "schema": {
+            "$ref": "#/backend/entities/adjustment"
+          },
+          "description": "Stores stock adjustment information. Inherits access control from the parent warehouse document. Includes denormalized 'members' map from the warehouse for authorization independence.",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            },
+            {
+              "name": "adjustmentId",
+              "description": "The unique identifier of the adjustment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "role_admin",
+          "schema": {
+            "$ref": "#/backend/entities/role_admin"
+          },
+          "description": "Collection to store UIDs of users with admin role. Authorization rules rely on existence check of document with user's UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed for the StockPilot Inventory Management System, prioritizing security, scalability, and ease of debugging. It adheres to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules Are Not Filters).\n\n**Authorization Independence:**  Authorization is achieved by avoiding hierarchical `get()` calls in security rules. This is accomplished through denormalization. For instance, access control information for documents within a warehouse (e.g., receipts, deliveries) could include a `members` map that duplicates the warehouse's access control list.  This ensures that access decisions can be made based solely on the document's data and the user's authentication state, without needing to fetch parent documents.\n\n**Structural Segregation:** The data is segregated into collections based on their access requirements. User data is stored in private collections (`/users/{userId}`). Product data and operations (receipts, deliveries, transfers, adjustments) are stored in separate collections, potentially under a warehouse document (e.g., `/warehouses/{warehouseId}/receipts/{receiptId}`), allowing for granular access control.\n\n**Access Modeling:** Path-based ownership is used for private user data (`/users/{userId}`). Membership maps (`members: {uid1: \"role\", uid2: \"role\"}`) are used for collaborative entities like warehouses, allowing multiple users to have different roles within a warehouse (e.g., manager, staff).  Global roles can be implemented using existence checks in dedicated collections (e.g., `/roles_admin/{uid}`).\n\n**QAPs (Rules Are Not Filters):** The structure is designed to support secure `list` operations. By ensuring that each collection has a homogeneous security posture (Strategy B), rules can be written to allow listing documents only if the user has the necessary permissions, without filtering the results based on document content.\n\n**Invariants:** The structure supports the integrity of ownership, timestamps, and denormalized data through the use of server-side timestamps and validation rules.\n\nThe design also uses explicit state modeling via a dedicated `status` field for operations (receipts, deliveries, etc.) and predictable schema with consistent naming conventions."
+  }
+}

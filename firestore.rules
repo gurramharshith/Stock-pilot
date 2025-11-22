@@ -1,0 +1,222 @@
+/**
+ * This ruleset enforces a multi-layered security model for the StockPilot app.
+ *
+ * Core Philosophy:
+ * The security model is built on three main concepts:
+ * 1. User Ownership: User profile data located at /users/{userId} is strictly private and can only be accessed by the authenticated user who owns it.
+ * 2. Shared Access (Collaborative Warehouses): The /warehouses collection and all its subcollections (products, receipts, etc.) use a Role-Based Access Control (RBAC) model. Access is controlled by a denormalized 'members' map on each warehouse document, defining user roles ('owner', 'editor', 'viewer'). This avoids slow and costly lookups.
+ * 3. Global Roles: A top-level /roles_admin collection is used for database-wide administrative privileges, allowing for performant checks on admin status.
+ *
+ * Data Structure:
+ * - /users/{userId}: Private user profile documents.
+ * - /warehouses/{warehouseId}: Top-level documents for each warehouse, containing a `members` map for access control.
+ * - /warehouses/{warehouseId}/{subcollection}/{docId}: All operational data (products, deliveries, etc.) is nested under its parent warehouse, inheriting permissions from it.
+ * - /roles_admin/{userId}: A simple collection where the existence of a document indicates a user has admin privileges.
+ *
+ * Key Security Decisions:
+ * - User Listing Disabled: To protect user privacy, it is not possible to list all documents in the `/users` collection.
+ * - Admin Collection is Read-Only: The `/roles_admin` collection cannot be modified by clients. Admin roles must be granted through a trusted backend process (e.g., a Cloud Function or manual console entry) to prevent privilege escalation.
+ * - Default Secure: The default posture is to deny access. Permissions are explicitly granted on a per-collection basis.
+ * - Denormalization for Authorization: Warehouse permissions are stored directly on the warehouse document. Rules for subcollections (like products or receipts) perform a fast `get()` call to their parent warehouse to check permissions, ensuring a single source of truth for access control within a warehouse.
+ * - Structural Segregation: Private user data is kept entirely separate from shared warehouse data, simplifying rules and preventing data leakage.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //----------------------------------------------------------------//
+    // Helper Functions
+    //----------------------------------------------------------------//
+
+    /**
+     * Returns true if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is the foundation of the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    /**
+     * Returns true if the authenticated user is a designated global admin.
+     * This check is performed by seeing if a document with the user's UID
+     * exists in the /roles_admin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+    
+    /**
+     * Checks if a user has a role (e.g., 'owner', 'editor', 'viewer')
+     * in the members map of a warehouse document.
+     * This function is used to secure the warehouse document itself.
+     */
+    function hasWarehouseRole(role) {
+      return isSignedIn() && resource.data.members[request.auth.uid] == role;
+    }
+    
+    /**
+     * Checks if a user has at least 'editor' privileges for a warehouse.
+     * Used for write operations on the warehouse document itself.
+     */
+    function isWarehouseEditorOrHigherOnResource() {
+        let role = resource.data.members[request.auth.uid];
+        return role == 'editor' || role == 'owner';
+    }
+
+    /**
+     * Retrieves the parent warehouse document data for subcollection rules.
+     */
+    function getParentWarehouseData(warehouseId) {
+        return get(/databases/$(database)/documents/warehouses/$(warehouseId)).data;
+    }
+
+    /**
+     * Checks if a user is any kind of member of the parent warehouse.
+     * Used for read access on warehouse subcollections.
+     */
+    function isParentWarehouseMember(warehouseId) {
+        let members = getParentWarehouseData(warehouseId).members;
+        return isSignedIn() && request.auth.uid in members;
+    }
+
+    /**
+     * Checks if a user has at least 'editor' privileges in the parent warehouse.
+     * Used for create/update operations in warehouse subcollections.
+     */
+    function isParentWarehouseEditorOrHigher(warehouseId) {
+        let role = getParentWarehouseData(warehouseId).members[request.auth.uid];
+        return isSignedIn() && (role == 'editor' || role == 'owner');
+    }
+    
+    /**
+     * Checks if a user has 'owner' privileges in the parent warehouse.
+     * Used for delete operations in warehouse subcollections.
+     */
+    function isParentWarehouseOwner(warehouseId) {
+        let role = getParentWarehouseData(warehouseId).members[request.auth.uid];
+        return isSignedIn() && role == 'owner';
+    }
+
+
+    //----------------------------------------------------------------//
+    // Collection Rules
+    //----------------------------------------------------------------//
+
+    /**
+     * @description Users can create their own profile, and read, update, or delete it. No other user can access it. Listing all users is forbidden.
+     * @path /users/{userId}
+     * @allow (create) A new user signs up and creates their own document: `auth.uid == 'user_abc'`, `path == /users/user_abc`.
+     * @deny (get) Another user tries to read a profile: `auth.uid == 'user_xyz'`, `path == /users/user_abc`.
+     * @principle Restricts access to a user's own data tree and enforces relational integrity between the document ID and its content.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && resource != null && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description A read-only collection for clients. Determines if a user is a global administrator. This collection should only be managed by trusted server-side code.
+     * @path /roles_admin/{userId}
+     * @allow (get) An admin checks if another user is an admin: `auth.uid` exists in `/roles_admin`.
+     * @deny (create) Any client tries to make themselves an admin.
+     * @principle Enforces privilege control by making admin role management a backend-only operation, preventing client-side escalation.
+     */
+    match /roles_admin/{userId} {
+      allow get: if isAdmin();
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Warehouses are collaborative spaces. Any signed-in user can create a warehouse, becoming its owner. Owners can manage members and delete the warehouse. Editors can modify warehouse details. Viewers can only read.
+     * @path /warehouses/{warehouseId}
+     * @allow (create) A signed-in user creates a warehouse, setting themselves as the owner: `request.resource.data.members[request.auth.uid] == 'owner'`.
+     * @deny (delete) An 'editor' member tries to delete the warehouse.
+     * @principle Implements Role-Based Access Control (RBAC) using a denormalized `members` map directly on the document.
+     */
+    match /warehouses/{warehouseId} {
+      allow get: if isSignedIn() && request.auth.uid in resource.data.members;
+      allow list: if isSignedIn(); // NOTE: Client queries MUST be secured, e.g., query.where('memberIds', 'array-contains', auth.uid)
+      allow create: if isSignedIn() && request.resource.data.members[request.auth.uid] == 'owner';
+      allow update: if resource != null && isWarehouseEditorOrHigherOnResource();
+      allow delete: if resource != null && hasWarehouseRole('owner');
+    }
+
+    /**
+     * @description Products within a warehouse. Access is inherited from the parent warehouse's `members` map. Editors/Owners can manage products, while any member can view them.
+     * @path /warehouses/{warehouseId}/products/{productId}
+     * @allow (get) A user with a 'viewer' role in the parent warehouse reads a product.
+     * @deny (create) A user who is not a member of the parent warehouse tries to add a product.
+     * @principle Enforces hierarchical permissions by looking up access rights from the parent document, ensuring a single source of truth for a warehouse's security.
+     */
+    match /warehouses/{warehouseId}/products/{productId} {
+      allow get, list: if isParentWarehouseMember(warehouseId);
+      allow create, update: if isParentWarehouseEditorOrHigher(warehouseId);
+      allow delete: if isParentWarehouseOwner(warehouseId);
+    }
+    
+    /**
+     * @description Receipts within a warehouse. Access is inherited from the parent warehouse's `members` map. Editors/Owners can manage receipts, while any member can view them.
+     * @path /warehouses/{warehouseId}/receipts/{receiptId}
+     * @allow (get) A user with a 'viewer' role in the parent warehouse reads a receipt.
+     * @deny (create) A user who is not a member of the parent warehouse tries to add a receipt.
+     * @principle Enforces hierarchical permissions by looking up access rights from the parent document, ensuring a single source of truth for a warehouse's security.
+     */
+    match /warehouses/{warehouseId}/receipts/{receiptId} {
+      allow get, list: if isParentWarehouseMember(warehouseId);
+      allow create, update: if isParentWarehouseEditorOrHigher(warehouseId);
+      allow delete: if isParentWarehouseOwner(warehouseId);
+    }
+    
+    /**
+     * @description Deliveries within a warehouse. Access is inherited from the parent warehouse's `members` map. Editors/Owners can manage deliveries, while any member can view them.
+     * @path /warehouses/{warehouseId}/deliveries/{deliveryId}
+     * @allow (get) A user with a 'viewer' role in the parent warehouse reads a delivery.
+     * @deny (create) A user who is not a member of the parent warehouse tries to add a delivery.
+     * @principle Enforces hierarchical permissions by looking up access rights from the parent document, ensuring a single source of truth for a warehouse's security.
+     */
+    match /warehouses/{warehouseId}/deliveries/{deliveryId} {
+      allow get, list: if isParentWarehouseMember(warehouseId);
+      allow create, update: if isParentWarehouseEditorOrHigher(warehouseId);
+      allow delete: if isParentWarehouseOwner(warehouseId);
+    }
+
+    /**
+     * @description Transfers within a warehouse. Access is inherited from the parent warehouse's `members` map. Editors/Owners can manage transfers, while any member can view them.
+     * @path /warehouses/{warehouseId}/transfers/{transferId}
+     * @allow (get) A user with a 'viewer' role in the parent warehouse reads a transfer document.
+     * @deny (create) A user who is not a member of the parent warehouse tries to add a transfer.
+     * @principle Enforces hierarchical permissions by looking up access rights from the parent document, ensuring a single source of truth for a warehouse's security.
+     */
+    match /warehouses/{warehouseId}/transfers/{transferId} {
+        allow get, list: if isParentWarehouseMember(warehouseId);
+        allow create, update: if isParentWarehouseEditorOrHigher(warehouseId);
+        allow delete: if isParentWarehouseOwner(warehouseId);
+    }
+
+    /**
+     * @description Adjustments within a warehouse. Access is inherited from the parent warehouse's `members` map. Editors/Owners can manage adjustments, while any member can view them.
+     * @path /warehouses/{warehouseId}/adjustments/{adjustmentId}
+     * @allow (get) A user with a 'viewer' role in the parent warehouse reads an adjustment document.
+     * @deny (create) A user who is not a member of the parent warehouse tries to add an adjustment.
+     * @principle Enforces hierarchical permissions by looking up access rights from the parent document, ensuring a single source of truth for a warehouse's security.
+     */
+    match /warehouses/{warehouseId}/adjustments/{adjustmentId} {
+        allow get, list: if isParentWarehouseMember(warehouseId);
+        allow create, update: if isParentWarehouseEditorOrHigher(warehouseId);
+        allow delete: if isParentWarehouseOwner(warehouseId);
+    }
+  }
+}
