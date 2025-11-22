@@ -9,16 +9,15 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { getApp } from 'firebase/app';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
 export default function ForgotPasswordPage() {
-  const auth = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof forgotPasswordSchema>>({
@@ -28,20 +27,22 @@ export default function ForgotPasswordPage() {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof forgotPasswordSchema>) => {
-    try {
-      await sendPasswordResetEmail(auth, values.email);
-      toast({
-        title: 'Password Reset Email Sent',
-        description: 'Please check your inbox to reset your password.',
+  const onSubmit = (values: z.infer<typeof forgotPasswordSchema>) => {
+    const auth = getAuth(getApp());
+    sendPasswordResetEmail(auth, values.email)
+      .then(() => {
+        toast({
+          title: 'Password Reset Email Sent',
+          description: 'Please check your inbox to reset your password.',
+        });
+      })
+      .catch((error: any) => {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message,
+        });
       });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message,
-      });
-    }
   };
 
   return (
