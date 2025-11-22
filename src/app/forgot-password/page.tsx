@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
+import { useState } from 'react';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -20,6 +21,7 @@ const forgotPasswordSchema = z.object({
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const auth = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -28,21 +30,44 @@ export default function ForgotPasswordPage() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof forgotPasswordSchema>) => {
-    sendPasswordResetEmail(auth, values.email)
-      .then(() => {
-        toast({
-          title: 'Password Reset Email Sent',
-          description: 'Please check your inbox to reset your password.',
-        });
-      })
-      .catch((error: any) => {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: error.message,
-        });
+  const onSubmit = async (values: z.infer<typeof forgotPasswordSchema>) => {
+    setLoading(true);
+    try {
+      if (!auth) throw new Error('Firebase auth not initialized');
+      
+      await sendPasswordResetEmail(auth, values.email);
+
+      toast({
+        title: 'Password Reset Email Sent',
+        description: 'Please check your inbox (and spam) for the reset link.',
       });
+
+      form.reset();
+    } catch (error: any) {
+      console.error('sendPasswordResetEmail error:', error);
+      const code = error?.code?.toString?.() ?? error?.message ?? '';
+
+      let message = 'Something went wrong. Please try again.';
+      if (code.includes('auth/user-not-found')) {
+        message = "No account found for that email address.";
+      } else if (code.includes('auth/invalid-email')) {
+        message = 'Invalid email address.';
+      } else if (code.includes('auth/too-many-requests')) {
+        message = 'Too many requests. Please try again later.';
+      } else if (code.includes('auth/network-request-failed')) {
+        message = 'Network error. Check your connection and try again.';
+      } else if (error?.message) {
+        message = error.message;
+      }
+
+      toast({
+        variant: 'destructive',
+        title: 'Unable to Send Reset Email',
+        description: message,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,8 +100,8 @@ export default function ForgotPasswordPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Send Reset Link
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Sending...' : 'Send Reset Link'}
               </Button>
             </form>
           </Form>
