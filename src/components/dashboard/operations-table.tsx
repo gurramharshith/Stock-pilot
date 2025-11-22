@@ -54,7 +54,7 @@ export default function OperationsTable() {
                 <TableHead className="hidden sm:table-cell">Destination</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead className="hidden md:table-cell">Date</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -69,7 +69,7 @@ export default function OperationsTable() {
                     <TableCell>
                     <Badge variant={getStatusVariant(op.status)}>{op.status}</Badge>
                     </TableCell>
-                    <TableCell>{op.scheduledDate}</TableCell>
+                    <TableCell className="hidden md:table-cell">{op.scheduledDate}</TableCell>
                 </TableRow>
                 )) : (
                     <TableRow>
