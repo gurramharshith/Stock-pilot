@@ -1,38 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThumbsUp } from "lucide-react";
 
-const recommendations = [
-    {
-        title: "Build Multiple Deployments Simultaneously",
-        description: "Never wait for a queued build."
-    },
-    {
-        title: "Get builds up to 40% faster",
-        description: "Switch to a bigger build machine."
-    },
-    {
-        title: "Prevent Frontend-Backend Mismatches",
-        description: "Automatically sync client and server versions to avoid deployment conflicts."
-    }
-]
 
 export default function RecommendationsPage() {
   return (
     <div>
       <h1 className="text-lg font-semibold md:text-2xl">Recommendations</h1>
-      <p className="text-muted-foreground mb-4">Improve your development and deployment workflow.</p>
-       <div className="grid gap-6">
-        {recommendations.map((rec, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-start gap-4">
-                <CheckCircle className="h-6 w-6 text-green-500 mt-1" />
-                <div>
-                    <CardTitle>{rec.title}</CardTitle>
-                    <p className="text-muted-foreground">{rec.description}</p>
-                </div>
-            </CardHeader>
-          </Card>
-        ))}
+      <p className="text-muted-foreground mb-4">This feature is not yet available.</p>
+       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm" x-chunk="dashboard-02-chunk-1">
+        <div className="flex flex-col items-center gap-2 text-center">
+            <ThumbsUp className="h-12 w-12 text-muted-foreground" />
+          <h3 className="text-2xl font-bold tracking-tight">
+            Coming Soon
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            AI-powered recommendations for your inventory are on the way.
+          </p>
+        </div>
       </div>
     </div>
   );

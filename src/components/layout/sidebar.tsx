@@ -9,24 +9,31 @@ import {
   Package,
   Rocket,
   Settings,
-  Truck,
   User,
-  Warehouse,
-  ArrowRightLeft,
-  Wrench,
   History,
   ChevronDown,
   ThumbsUp,
+  Truck,
+  ArrowRightLeft,
+  Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useAuth } from '@/firebase';
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const auth = useAuth();
   const isOperationsActive = ['/receipts', '/deliveries', '/transfers', '/adjustments'].some(p => pathname.startsWith(p));
   const [isOperationsOpen, setIsOperationsOpen] = useState(isOperationsActive);
+
+  const handleLogout = async () => {
+    if (auth) {
+      await auth.signOut();
+    }
+  };
 
   return (
     <div className="hidden border-r bg-card md:block">
@@ -77,7 +84,6 @@ export default function AppSidebar() {
                   <div className="grid auto-rows-auto items-start pl-7 pt-2 gap-1">
                     <Link href="/receipts" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/receipts') && 'bg-muted text-primary')}>Receipts</Link>
                     <Link href="/deliveries" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/deliveries') && 'bg-muted text-primary')}>Delivery Orders</Link>
-                    <Link href="/transfers" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/transfers') && 'bg-muted text-primary')}>Internal Transfers</Link>
                     <Link href="/adjustments" className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary', pathname.startsWith('/adjustments') && 'bg-muted text-primary')}>Adjustments</Link>
                 </div>
               </CollapsibleContent>
@@ -93,16 +99,7 @@ export default function AppSidebar() {
               <History className="h-4 w-4" />
               Move History
             </Link>
-            <Link
-              href="/recommendations"
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                pathname === '/recommendations' && 'bg-muted text-primary'
-              )}
-            >
-              <ThumbsUp className="h-4 w-4" />
-              Recommendations
-            </Link>
+            
              <Link
               href="/settings/warehouse"
               className={cn(
@@ -123,11 +120,9 @@ export default function AppSidebar() {
                         My Profile
                     </Link>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive" asChild>
-                    <Link href="/login">
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </Link>
+                <Button onClick={handleLogout} variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive">
+                    <LogOut className="h-4 w-4" />
+                    Logout
                 </Button>
             </div>
         </div>
